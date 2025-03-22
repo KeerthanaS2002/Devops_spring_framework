@@ -2,24 +2,22 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "keerthanas04/social-app"
-        DOCKER_TAG = "latest"
-        DOCKER_CREDENTIALS_ID = "Docker"
-        GITHUB_CREDENTIALS_ID = "GitHub"
-        KUBECONFIG = "/var/lib/jenkins/.kube/config"
+        IMAGE_NAME = "keerthanas04/my-service"
+        DOCKER_USER = "keerthanas04" // Replace with your actual Docker Hub username
+        DOCKER_PASS = "Keerthana@04" // Replace with your actual Docker Hub password
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                git credentialsId: GITHUB_CREDENTIALS_ID, url: 'https://github.com/KeerthanaS2002/Devops_spring_framework.git', branch: 'main'
+                git url: 'https://github.com/KeerthanaS2002/Devops_spring_framework.git', branch: 'main'
             }
         }
 
         stage('Build Application') {
             steps {
                 script {
-                    sh '${MAVEN_HOME}/bin/mvn clean package -DskipTests'
+                    sh 'mvn clean package -DskipTests'
                 }
             }
         }
@@ -39,37 +37,34 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                    sh "docker build -t ${IMAGE_NAME}:latest ."
                 }
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Login to Docker Registry') {
             steps {
-                withDockerRegistry([credentialsId: DOCKER_CREDENTIALS_ID, url: '']) {
-                    sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                script {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
                 }
             }
         }
 
-        // stage('Deploy to Kubernetes') {
-        //     steps {
-        //         script {
-        //             sh '''
-        //                 chmod +x scripts/deploy.sh
-        //                 ./scripts/deploy.sh
-        //             '''
-        //         }
-        //     }
-        // }
+        stage('Push Image to Docker Registry') {
+            steps {
+                script {
+                    sh "docker push ${IMAGE_NAME}:latest"
+                }
+            }
+        }
     }
 
     post {
         success {
-            echo "Deployment Successful!"
+            echo 'Pipeline executed successfully!'
         }
         failure {
-            echo "Deployment Failed!"
+            echo 'Pipeline failed! Check the logs for errors.'
         }
     }
 }
